@@ -24,9 +24,8 @@ namespace WinTail
 			{
 				DoPrintInstructions();
 			}
-			else if (message is Messages.InputError)
-			{
-				_consoleWriterActor.Tell((Messages.InputError)message);
+			else if (message is Messages.InputError) {
+				_consoleWriterActor.Tell ((Messages.InputError)message);
 			}
 
 			GetAndValidateInput();
@@ -48,7 +47,7 @@ namespace WinTail
 		/// </summary>
 		private void GetAndValidateInput()
 		{
-			var message = Console.ReadLine();
+			var message = Console.ReadLine ();
 			if (string.IsNullOrEmpty(message))
 			{
 				// signal that the user needs to supply an input, as previously

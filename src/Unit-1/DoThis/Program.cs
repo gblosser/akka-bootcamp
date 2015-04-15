@@ -4,12 +4,14 @@
 namespace WinTail
 {
 	#region Program
-	class Program
+	public class Program
 	{
 		public static ActorSystem MyActorSystem;
 
 		static void Main(string[] args)
 		{
+			Console.WriteLine ("test");
+
 			// initialize MyActorSystem
 			MyActorSystem = ActorSystem.Create("MyActorSystem");
 
