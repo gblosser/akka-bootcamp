@@ -1,93 +1,62 @@
+// ConsoleReaderActor.cs
+// removing validation logic and changing store actor references
 using System;
 using Akka.Actor;
 
 namespace WinTail
 {
 	/// <summary>
-	/// Actor responsible for reading FROM the console. 
+	/// Actor responsible for reading FROM the console.
 	/// Also responsible for calling <see cref="ActorSystem.Shutdown"/>.
 	/// </summary>
 	class ConsoleReaderActor : UntypedActor
 	{
 		public const string StartCommand = "start";
 		public const string ExitCommand = "exit";
-		private IActorRef _consoleWriterActor;
+		private readonly IActorRef _validationActor;
 
-		public ConsoleReaderActor(IActorRef consoleWriterActor)
+		public ConsoleReaderActor (IActorRef validationActor)
 		{
-			_consoleWriterActor = consoleWriterActor;
+			_validationActor = validationActor;
 		}
 
-		protected override void OnReceive(object message)
+		protected override void OnReceive (object message)
 		{
-			if (message.Equals(StartCommand))
-			{
-				DoPrintInstructions();
-			}
-			else if (message is Messages.InputError) {
-				_consoleWriterActor.Tell ((Messages.InputError)message);
+			if (message.Equals (StartCommand)) {
+				DoPrintInstructions ();
 			}
 
-			GetAndValidateInput();
+			GetAndValidateInput ();
 		}
 
 
 		#region Internal methods
 
-		private void DoPrintInstructions()
+		private void DoPrintInstructions ()
 		{
-			Console.WriteLine("Write whatever you want into the console!");
-			Console.WriteLine("Some entries will pass validation, and some won't...\n\n");
-			Console.WriteLine("Type 'exit' to quit this application at any time.\n");
+			Console.WriteLine ("Write whatever you want into the console!");
+			Console.WriteLine ("Some entries will pass validation, and some won't...\n\n");
+			Console.WriteLine ("Type 'exit' to quit this application at any time.\n");
 		}
+
 
 		/// <summary>
 		/// Reads input from console, validates it, then signals appropriate response
 		/// (continue processing, error, success, etc.).
 		/// </summary>
-		private void GetAndValidateInput()
+		private void GetAndValidateInput ()
 		{
 			var message = Console.ReadLine ();
-			if (string.IsNullOrEmpty(message))
-			{
-				// signal that the user needs to supply an input, as previously
-				// received input was blank
-				Self.Tell(new Messages.NullInputError("No input received."));
+			if (!string.IsNullOrEmpty (message) && String.Equals (message, ExitCommand, StringComparison.OrdinalIgnoreCase)) {
+				// if user typed ExitCommand, shut down the entire actor system (allows the process to exit)
+				Context.System.Shutdown ();
+				return;
 			}
-			else if (String.Equals(message, ExitCommand, StringComparison.OrdinalIgnoreCase))
-			{
-				// shut down the entire actor system (allows the process to exit)
-				Context.System.Shutdown();
-			}
-			else
-			{
-				var valid = IsValid(message);
-				if (valid)
-				{
-					_consoleWriterActor.Tell(new Messages.InputSuccess("Thank you! Message was valid."));
-				}
-				else
-				{
-					Self.Tell(new Messages.ValidationError("Invalid: input had odd number of characters."));
-				}
 
-				// continue reading messages from console
-				Self.Tell(new Messages.ContinueProcessing());
-			}
+			// otherwise, just hand message off to validation actor (by telling its actor ref)
+			_validationActor.Tell (message);
 		}
 
-		/// <summary>
-		/// Validates <see cref="message"/>.
-		/// Currently says messages are valid if contain even number of characters.
-		/// </summary>
-		/// <param name="message"></param>
-		/// <returns></returns>
-		private static bool IsValid(string message)
-		{
-			var valid = message.Length % 2 == 0;
-			return valid;
-		}
-
-		#endregion Internal methods
+		#endregion
 	}
 }
